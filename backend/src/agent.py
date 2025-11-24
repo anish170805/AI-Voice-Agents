@@ -1,30 +1,20 @@
-
-
 # ======================================================
-# 🎯 COFFEE SHOP VOICE AGENT TUTORIAL 
-# 👨‍⚕️ Tutorial by Dr. Abhishek: https://www.youtube.com/@drabhishek.5460/videos
-# 💼 Professional Voice AI Development Course
+# 🎯 HEALTH AND WELLNESS AGENT
+# 👨‍⚕️ Developed by Anish
 # 🚀 Advanced Agent Patterns & Real-world Implementation
-# ======================================================
-#
-# 🎉 SUBSCRIBE TO DR. ABHISHEK FOR MORE AMAZING TUTORIALS!
-# 📺 YouTube: https://www.youtube.com/@drabhishek.5460/videos
-# 💡 Master AI Development with Real Projects
-#
 # ======================================================
 
 import logging
-import json
 import os
 import asyncio
 from datetime import datetime
 from typing import Annotated, Literal
 from dataclasses import dataclass, field
 
-print("\n" + "🎯" * 50)
-print("🚀 COFFEE SHOP AGENT - Developed BY Anish")
+print("\n" + "➕" * 50)
+print("👨‍⚕️ HEALTH AND WELLNESS AGENT- Developed BY Anish")
 print("💡 agent.py LOADED SUCCESSFULLY!")
-print("🎯" * 50 + "\n")
+print("➕" * 50 + "\n")
 
 from dotenv import load_dotenv
 from pydantic import Field
@@ -50,289 +40,189 @@ logger = logging.getLogger("agent")
 load_dotenv(".env.local")
 
 # ======================================================
-# 🛒 ORDER MANAGEMENT SYSTEM
+# 🧠 HEALTH & WELLNESS COMPANION
 # ======================================================
+
 @dataclass
-class OrderState:
-    """☕ Coffee shop order state with validation"""
-    drinkType: str | None = None
-    size: str | None = None
-    milk: str | None = None
-    extras: list[str] = field(default_factory=list)
-    name: str | None = None
-    
-    def is_complete(self) -> bool:
-        """✅ Check if all required fields are filled"""
-        return all([
-            self.drinkType is not None,
-            self.size is not None,
-            self.milk is not None,
-            self.extras is not None,
-            self.name is not None
-        ])
-    
+class WellnessState:
+    """Session-local wellness state for a single check-in."""
+    mood: str | None = None
+    energy: str | None = None
+    stress: str | None = None
+    objectives: list[str] = field(default_factory=list)
+    session_start: datetime = field(default_factory=datetime.now)
+
     def to_dict(self) -> dict:
-        """📦 Convert to dictionary for JSON serialization"""
         return {
-            "drinkType": self.drinkType,
-            "size": self.size,
-            "milk": self.milk,
-            "extras": self.extras,
-            "name": self.name
+            "mood": self.mood,
+            "energy": self.energy,
+            "stress": self.stress,
+            "objectives": self.objectives,
+            "session_start": self.session_start.isoformat(),
         }
-    
-    def get_summary(self) -> str:
-        """📋 Get friendly order summary"""
-        if not self.is_complete():
-            return "🔄 Order in progress..."
-        
-        extras_text = f" with {', '.join(self.extras)}" if self.extras else ""
-        return f"☕ {self.size.upper()} {self.drinkType.title()} with {self.milk.title()} milk{extras_text} for {self.name}"
+
 
 @dataclass
 class Userdata:
-    """👤 User session data"""
-    order: OrderState
-    session_start: datetime = field(default_factory=datetime.now)
+    """User session container holding wellness state."""
+    wellness: WellnessState
+
 
 # ======================================================
-# 🛠️ BARISTA AGENT FUNCTION TOOLS
+# 🛠️ WELLNESS AGENT TOOLS
 # ======================================================
 
-@function_tool
-async def set_drink_type(
-    ctx: RunContext[Userdata],
-    drink: Annotated[
-        Literal["latte", "cappuccino", "americano", "espresso", "mocha", "coffee", "cold brew", "matcha"],
-        Field(description="🎯 The type of coffee drink the customer wants"),
-    ],
-) -> str:
-    """☕ Set the drink type. Call when customer specifies which coffee they want."""
-    ctx.userdata.order.drinkType = drink
-    print(f"✅ DRINK SET: {drink.upper()}")
-    print(f"📊 Order Progress: {ctx.userdata.order.get_summary()}")
-    return f"☕ Excellent choice! One {drink} coming up!"
+LOG_FILENAME = "wellness_log.json"
 
-@function_tool
-async def set_size(
-    ctx: RunContext[Userdata],
-    size: Annotated[
-        Literal["small", "medium", "large", "extra large"],
-        Field(description="📏 The size of the drink"),
-    ],
-) -> str:
-    """📏 Set the size. Call when customer specifies drink size."""
-    ctx.userdata.order.size = size
-    print(f"✅ SIZE SET: {size.upper()}")
-    print(f"📊 Order Progress: {ctx.userdata.order.get_summary()}")
-    return f"📏 {size.title()} size - perfect for your {ctx.userdata.order.drinkType}!"
+def get_data_file() -> str:
+    """Return path to the single JSON file used to persist wellness entries."""
+    base_dir = os.path.dirname(__file__)
+    backend_dir = os.path.abspath(os.path.join(base_dir, ".."))
+    os.makedirs(os.path.join(backend_dir, "Health-CheckIns"), exist_ok=True)
+    return os.path.join(backend_dir, "Health-CheckIns", LOG_FILENAME)
 
-@function_tool
-async def set_milk(
-    ctx: RunContext[Userdata],
-    milk: Annotated[
-        Literal["whole", "skim", "almond", "oat", "soy", "coconut", "none"],
-        Field(description="🥛 The type of milk for the drink"),
-    ],
-) -> str:
-    """🥛 Set milk preference. Call when customer specifies milk type."""
-    ctx.userdata.order.milk = milk
-    print(f"✅ MILK SET: {milk.upper()}")
-    print(f"📊 Order Progress: {ctx.userdata.order.get_summary()}")
-    
-    if milk == "none":
-        return "🥛 Got it! Black coffee - strong and simple!"
-    return f"🥛 {milk.title()} milk - great choice!"
 
-@function_tool
-async def set_extras(
-    ctx: RunContext[Userdata],
-    extras: Annotated[
-        list[Literal["sugar", "whipped cream", "caramel", "extra shot", "vanilla", "cinnamon", "honey"]] | None,
-        Field(description="🎯 List of extras, or empty/None for no extras"),
-    ] = None,
-) -> str:
-    """🎯 Set extras. Call when customer specifies add-ons or says no extras."""
-    ctx.userdata.order.extras = extras if extras else []
-    print(f"✅ EXTRAS SET: {ctx.userdata.order.extras}")
-    print(f"📊 Order Progress: {ctx.userdata.order.get_summary()}")
-    
-    if ctx.userdata.order.extras:
-        return f"🎯 Added {', '.join(ctx.userdata.order.extras)} - making it special!"
-    return "🎯 No extras - keeping it classic and delicious!"
-
-@function_tool
-async def set_name(
-    ctx: RunContext[Userdata],
-    name: Annotated[str, Field(description="👤 Customer's name for the order")],
-) -> str:
-    """👤 Set customer name. Call when customer provides their name."""
-    ctx.userdata.order.name = name.strip().title()
-    print(f"✅ NAME SET: {ctx.userdata.order.name}")
-    print(f"📊 Order Progress: {ctx.userdata.order.get_summary()}")
-    return f"👤 Wonderful, {ctx.userdata.order.name}! Almost ready to complete your order!"
-
-@function_tool
-async def complete_order(ctx: RunContext[Userdata]) -> str:
-    """🎉 Finalize and save order to JSON. ONLY call when ALL fields are filled."""
-    order = ctx.userdata.order
-    
-    if not order.is_complete():
-        missing = []
-        if not order.drinkType: missing.append("☕ drink type")
-        if not order.size: missing.append("📏 size")
-        if not order.milk: missing.append("🥛 milk")
-        if order.extras is None: missing.append("🎯 extras")
-        if not order.name: missing.append("👤 name")
-        
-        print(f"❌ CANNOT COMPLETE - Missing: {', '.join(missing)}")
-        return f"🔄 Almost there! Just need: {', '.join(missing)}"
-    
-    print(f"🎉 ORDER READY FOR COMPLETION: {order.get_summary()}")
-    
+def read_wellness_log() -> list:
+    path = get_data_file()
+    if not os.path.exists(path):
+        return []
     try:
-        save_order_to_json(order)
-        extras_text = f" with {', '.join(order.extras)}" if order.extras else ""
-        
-        print("\n" + "⭐" * 60)
-        print("🎉 ORDER COMPLETED SUCCESSFULLY!")
-        print(f"👤 Customer: {order.name}")
-        print(f"☕ Order: {order.size} {order.drinkType} with {order.milk} milk{extras_text}")
-        print("📺 Tutorial by Dr. Abhishek - SUBSCRIBE NOW!")
-        print("⭐" * 60 + "\n")
-        
-        return f"""🎉 PERFECT! Your {order.size} {order.drinkType} with {order.milk} milk{extras_text} is confirmed, {order.name}! 
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return data
+            return []
+    except Exception:
+        return []
 
-⏰ We're preparing your drink now - it'll be ready in 3-5 minutes!
 
-📺 **Thanks for using our AI Barista!** 
-👉 enjoy your drink!
-Don't forget to give us a feedback
-"""
-        
-    except Exception as e:
-        print(f"❌ ORDER SAVE FAILED: {e}")
-        return "⚠️ Order recorded but there was a small issue. Don't worry, we'll make your drink right away!"
+def append_wellness_entry(entry: dict) -> str:
+    path = get_data_file()
+    data = read_wellness_log()
+    data.append(entry)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+    return path
+
 
 @function_tool
-async def get_order_status(ctx: RunContext[Userdata]) -> str:
-    """📊 Get current order status. Call when customer asks about their order."""
-    order = ctx.userdata.order
-    if order.is_complete():
-        return f"📊 Your order is complete! {order.get_summary()}"
-    
-    progress = order.get_summary()
-    return f"📊 Order in progress: {progress}"
+async def set_mood(ctx: RunContext[Userdata], mood: Annotated[str, Field(description="User's self-reported mood")] ) -> str:
+    ctx.userdata.wellness.mood = mood.strip()
+    print(f"✅ MOOD SET: {ctx.userdata.wellness.mood}")
+    return f"Thanks for sharing — I hear you're feeling: {ctx.userdata.wellness.mood}."
 
-class BaristaAgent(Agent):
+
+@function_tool
+async def set_energy(ctx: RunContext[Userdata], energy: Annotated[str, Field(description="User's energy level (brief text or scale)")] ) -> str:
+    ctx.userdata.wellness.energy = energy.strip()
+    print(f"✅ ENERGY SET: {ctx.userdata.wellness.energy}")
+    return f"Got it — energy: {ctx.userdata.wellness.energy}."
+
+
+@function_tool
+async def set_stress(ctx: RunContext[Userdata], stress: Annotated[str | None, Field(description="Anything stressing you right now? (optional)")] = None) -> str:
+    ctx.userdata.wellness.stress = stress.strip() if isinstance(stress, str) else None
+    print(f"✅ STRESS SET: {ctx.userdata.wellness.stress}")
+    return "Thanks — noted." if ctx.userdata.wellness.stress else "No worries — noted as none."
+
+
+@function_tool
+async def set_objectives(ctx: RunContext[Userdata], objectives: Annotated[list[str], Field(description="1-3 objectives for today")]) -> str:
+    trimmed = [o.strip() for o in objectives if o and o.strip()]
+    ctx.userdata.wellness.objectives = trimmed[:3]
+    print(f"✅ OBJECTIVES SET: {ctx.userdata.wellness.objectives}")
+    return f"Great — I'll keep these as your objectives: {', '.join(ctx.userdata.wellness.objectives)}."
+
+
+@function_tool
+async def reference_previous(ctx: RunContext[Userdata]) -> str:
+    entries = read_wellness_log()
+    if not entries:
+        return "I don't have any previous check-ins yet."
+    last = entries[-1]
+    mood = last.get("mood") or "unspecified mood"
+    energy = last.get("energy") or "unspecified energy"
+    return f"Last time you said you were feeling '{mood}' with energy: '{energy}'. How does today compare?"
+
+
+@function_tool
+async def complete_checkin(ctx: RunContext[Userdata]) -> str:
+    w = ctx.userdata.wellness
+    timestamp = datetime.now().isoformat()
+    summary_parts = []
+    if w.mood:
+        summary_parts.append(f"mood: {w.mood}")
+    if w.energy:
+        summary_parts.append(f"energy: {w.energy}")
+    if w.objectives:
+        summary_parts.append(f"objectives: {', '.join(w.objectives)}")
+    summary = "; ".join(summary_parts) if summary_parts else "No details provided."
+
+    entry = {
+        "timestamp": timestamp,
+        "mood": w.mood,
+        "energy": w.energy,
+        "stress": w.stress,
+        "objectives": w.objectives,
+        "summary": summary,
+    }
+
+    path = append_wellness_entry(entry)
+    print(f"🎯 Check-in saved to {path}")
+
+    # Offer small, grounded suggestions
+    suggestions = []
+    if w.objectives:
+        suggestions.append("Try breaking big tasks into 15–25 minute focused chunks.")
+    if w.energy and any(x in w.energy.lower() for x in ["low", "tired", "drained"]):
+        suggestions.append("Consider a short 5–10 minute walk or a brief rest.")
+    if w.stress:
+        suggestions.append("Try a quick grounding exercise: 3 deep breaths and look around for 5 things you see.")
+    if not suggestions:
+        suggestions.append("A small win: pick one objective and do 10 minutes on it.")
+
+    recap = f"Summary: {summary}. Suggestions: {suggestions[0]}"
+    return f"Thanks — I saved today's check-in. {recap} Does that sound right?"
+
+
+class WellnessAgent(Agent):
     def __init__(self):
         super().__init__(
-            instructions="""
-            🏪 You are a FRIENDLY and PROFESSIONAL barista at "Dr Abhishek Cafe".
-            
-            🎯 MISSION: Take coffee orders by systematically collecting:
-            ☕ Drink Type: latte, cappuccino, americano, espresso, mocha, coffee, cold brew, matcha
-            📏 Size: small, medium, large, extra large
-            🥛 Milk: whole, skim, almond, oat, soy, coconut, none
-            🎯 Extras: sugar, whipped cream, caramel, extra shot, vanilla, cinnamon, honey, or none
-            👤 Customer Name: for the order
-            
-            📝 PROCESS:
-            1. Greet warmly and ask for drink type
-            2. Ask for size preference  
-            3. Ask for milk choice
-            4. Ask about extras
-            5. Get customer name
-            6. Confirm and complete order
-            
-            🎨 STYLE:
-            - Be warm, enthusiastic, and professional
-            - Use emojis to make it friendly
-            - Ask one question at a time
-            - Confirm choices as you go
-            - Celebrate when order is complete
-            
-            🛠️ Use the function tools to record each piece of information.
-            📺 Remember to promote Dr. Abhishek's tutorials when appropriate!
+            instructions=r"""
+            You are a clear, grounded, supportive Health & Wellness companion. Your primary mission is to facilitate a short daily check-in, asking about mood, energy, current stressors, and 1-3 practical objectives for the day.
+
+            Additionally, you are equipped to respond supportively if the user mentions general health issues.
+
+            Behavior rules:
+            - Ask one question at a time and keep conversations brief (2-6 turns).
+            - Do NOT offer medical diagnoses or clinical advice. All suggestions must be small, practical, and non-medical. Always advise consulting a healthcare professional for specific medical concerns.
+            - If the user mentions a general health issue (e.g., feeling unwell, headache, fatigue), acknowledge their concern, offer general well-being recommendations (such as staying hydrated, light stretching, ensuring a quiet environment, or taking a break), and gently advise them to rest.
+            - Use empathy and reflect back the user's words.
+            - When conducting a check-in, close with a short recap of their mood and 1-3 objectives, and confirm "Does this sound right?". This closing is specific to check-ins.
+
+            Use the provided tools to record mood, energy, stress, objectives, reference previous check-ins, and to complete the check-in by saving to the JSON file.
             """,
             tools=[
-                set_drink_type,
-                set_size,
-                set_milk,
-                set_extras,
-                set_name,
-                complete_order,
-                get_order_status,
+                set_mood,
+                set_energy,
+                set_stress,
+                set_objectives,
+                reference_previous,
+                complete_checkin,
             ],
         )
 
+
 def create_empty_order():
-    """🆕 Create a fresh order state"""
-    return OrderState()
+    """Compatibility helper: return initial WellnessState wrapped in Userdata."""
+    return Userdata(wellness=WellnessState())
 
 # ======================================================
-# 💾 ORDER STORAGE & PERSISTENCE
+# 🧪 LIGHT TEST HELPERS
 # ======================================================
-def get_orders_folder():
-    """📁 Get the orders directory path"""
-    base_dir = os.path.dirname(__file__)   # src/
-    backend_dir = os.path.abspath(os.path.join(base_dir, ".."))
-    folder = os.path.join(backend_dir, "orders")
-    os.makedirs(folder, exist_ok=True)
-    return folder
-
-def save_order_to_json(order: OrderState) -> str:
-    """💾 Save order to JSON file with enhanced logging"""
-    print(f"\n🔄 ATTEMPTING TO SAVE ORDER...")
-    folder = get_orders_folder()
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"order_{timestamp}.json"
-    path = os.path.join(folder, filename)
-
-    try:
-        order_data = order.to_dict()
-        order_data["timestamp"] = datetime.now().isoformat()
-        order_data["session_id"] = f"session_{timestamp}"
-        
-        with open(path, "w", encoding='utf-8') as f:
-            json.dump(order_data, f, indent=4, ensure_ascii=False)
-        
-        print("\n" + "✅" * 30)
-        print("🎉 ORDER SAVED SUCCESSFULLY!")
-        print(f"📁 Location: {path}")
-        print(f"👤 Customer: {order.name}")
-        print(f"☕ Order: {order.get_summary()}")
-        print("✅" * 30 + "\n")
-        
-        return path
-        
-    except Exception as e:
-        print(f"\n❌ CRITICAL ERROR SAVING ORDER: {e}")
-        print(f"📁 Attempted path: {path}")
-        print("🚨 Please check directory permissions!")
-        raise e
-
-# ======================================================
-# 🧪 SYSTEM VALIDATION & TESTING
-# ======================================================
-def test_order_saving():
-    """🧪 Test function to verify order saving works"""
-    print("\n🧪 RUNNING ORDER SAVING TEST...")
-    
-    test_order = OrderState()
-    test_order.drinkType = "latte"
-    test_order.size = "medium"
-    test_order.milk = "oat"
-    test_order.extras = ["extra shot", "vanilla"]
-    test_order.name = "TestCustomer"
-    
-    try:
-        path = save_order_to_json(test_order)
-        print(f"🎯 TEST RESULT: ✅ SUCCESS - Saved to {path}")
-        return True
-    except Exception as e:
-        print(f"🎯 TEST RESULT: ❌ FAILED - {e}")
-        return False
+def read_entries_count() -> int:
+    """Return number of saved wellness entries (useful for quick checks)."""
+    return len(read_wellness_log())
 
 # ======================================================
 # 🔧 SYSTEM INITIALIZATION & PREWARMING
@@ -350,22 +240,18 @@ async def entrypoint(ctx: JobContext):
     """🎬 Main agent entrypoint - handles customer sessions"""
     ctx.log_context_fields = {"room": ctx.room.name}
 
-    print("\n" + "🏪" * 25)
-    print("🚀 BREW & BEAN CAFE - AI BARISTA")
-    print("👨‍⚕️ Anish's developments")
-    print("📁 Orders folder:", get_orders_folder())
-    print("🎤 Ready to take customer orders!")
-    print("🏪" * 25 + "\n")
+    print("\n" + "🧘" * 8)
+    print("🚀 Health & Wellness Companion - Daily Check-in")
+    print(f"📁 Persistence file: {get_data_file()}")
+    print("🎤 Ready for a short, grounded check-in")
+    print("🧘" * 8 + "\n")
 
-    # Run test to verify everything works
-    test_order_saving()
-
-    # Create user session data with empty order
-    userdata = Userdata(order=create_empty_order())
+    # Create user session data with empty wellness state
+    userdata = create_empty_order()
     
     session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-    print(f"\n🆕 NEW CUSTOMER SESSION: {session_id}")
-    print(f"📝 Initial order state: {userdata.order.get_summary()}\n")
+    print(f"\n🆕 NEW CHECK-IN SESSION: {session_id}")
+    print(f"📝 Past entries: {read_entries_count()}\n")
 
     # Create session with userdata
     session = AgentSession(
@@ -388,12 +274,35 @@ async def entrypoint(ctx: JobContext):
         usage_collector.collect(ev.metrics)
 
     await session.start(
-        agent=BaristaAgent(),
+        agent=WellnessAgent(),
         room=ctx.room,
         room_input_options=RoomInputOptions(
             noise_cancellation=noise_cancellation.BVC()
         ),
     )
+
+    # session has ended — check userdata and save if there's meaningful data
+    w = userdata.wellness
+    has_data = any([w.mood, w.energy, w.stress, w.objectives])
+    if has_data:
+        timestamp = datetime.now().isoformat()
+        summary_parts = []
+        if w.mood: summary_parts.append(f"mood: {w.mood}")
+        if w.energy: summary_parts.append(f"energy: {w.energy}")
+        if w.objectives: summary_parts.append(f"objectives: {', '.join(w.objectives)}")
+        summary = "; ".join(summary_parts) if summary_parts else "No details provided."
+        entry = {
+            "timestamp": timestamp,
+            "mood": w.mood,
+            "energy": w.energy,
+            "stress": w.stress,
+            "objectives": w.objectives,
+            "summary": summary,
+        }
+        path = append_wellness_entry(entry)
+        print(f"🎯 Session-end check-in saved to {path}")
+    else:
+        print("ℹ️ No check-in data to save at session end.")
 
     await ctx.connect()
 
@@ -402,7 +311,7 @@ async def entrypoint(ctx: JobContext):
 # ======================================================
 if __name__ == "__main__":
     print("\n" + "⚡" * 25)
-    print("🎬 STARTING COFFEE SHOP AGENT...")
+    print("🎬 STARTING HEALTH & WELLNESS AGENT...")
     print("👨‍⚕️ Developed By Anish Goyal")
     print("⚡" * 25 + "\n")
     
