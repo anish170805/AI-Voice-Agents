@@ -1,0 +1,26 @@
+[
+    {
+        "id": "llm",
+        "title": "Large Language Models (LLMs)",
+        "summary": "Large Language Models, or LLMs, are advanced AI models trained on vast amounts of text data. They can understand and generate human-like text for tasks like question answering, summarization, and translation. Examples include models from OpenAI, Google, and Anthropic.",
+        "sample_question": "What are the key capabilities of a Large Language Model?"
+    },
+    {
+        "id": "langchain",
+        "title": "LangChain",
+        "summary": "LangChain is a framework for developing applications powered by language models. It provides tools and abstractions to create complex applications that can connect LLMs to other data sources and APIs, enabling them to be more powerful and data-aware.",
+        "sample_question": "What is the main purpose of using a framework like LangChain?"
+    },
+    {
+        "id": "rag",
+        "title": "Retrieval-Augmented Generation (RAG)",
+        "summary": "Retrieval-Augmented Generation, or RAG, is a technique that enhances LLM responses by retrieving relevant information from an external knowledge base. This allows the model to answer questions about specific or recent data it wasn't trained on, reducing hallucinations.",
+        "sample_question": "How does RAG help improve the responses from a Large Language Model?"
+    },
+    {
+        "id": "ai_agents",
+        "title": "AI Agents",
+        "summary": "An AI Agent uses a language model as its reasoning engine to make decisions and perform actions. It can use a set of tools, observe the outcomes, and loop until a task is complete. This allows it to handle complex, multi-step problems autonomously.",
+        "sample_question": "What makes an AI Agent different from a simple chatbot?"
+    }
+]
