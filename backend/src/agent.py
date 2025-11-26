@@ -13,8 +13,8 @@ from dataclasses import dataclass, asdict
 
 print("\n" + "💼" * 50)
 print("🚀 AI SDR AGENT - DAY 5 TUTORIAL")
-print("📚 SELLING:  Kourses.ai courses")
-print("💡 agent.py LOADED SUCCESSFULLY!")
+print("📚 SELLING:  Zoho products")
+print("� agent.py LOADED SUCCESSFULLY!")
 print("💼" * 50 + "\n")
 
 from dotenv import load_dotenv
@@ -46,22 +46,22 @@ FAQ_FILE = "store_faq.json"
 LEADS_FILE = "leads_db.json"
 
 # Default FAQ data for "Kourses ai Store"
-DEFAULT_FAQ = [
+DEFAULT_FAQ =  [
     {
         "question": "What do you sell?",
-        "answer": "We offer premium courses on Cloud Computing, Google Cloud Arcade, and Voice AI Agent development. We also sell 'Cloud Ninja' merchandise like hoodies and mugs."
+        "answer": "We sell a comprehensive suite of business software called Zoho One. It includes over 50 applications for sales, marketing, support, accounting, and more, all integrated into one system."
     },
     {
-        "question": "How much does the Voice AI course cost?",
-        "answer": "The 'Professional Voice AI' course is currently priced at $499. It covers LiveKit, Deepgram, and LLM integration."
+        "question": "How much does Zoho One cost?",
+        "answer": "Zoho One has two pricing plans: Flexible User Pricing at ₹2,100 per user per month, and All Employee Pricing at ₹900 per employee per month. I can have a specialist email you the full details."
     },
     {
-        "question": "Do you offer free content?",
-        "answer": "Yes! kourses.ai releases weekly tutorials on YouTube for free. The paid courses offer deep-dives, code reviews, and certification."
+        "question": "What is Zoho CRM?",
+        "answer": "Zoho CRM is our customer relationship management software. It helps businesses manage sales, marketing, and customer support activities. It's also part of the Zoho One suite."
     },
     {
-        "question": "Do you do corporate consulting?",
-        "answer": "Absolutely. We help companies build internal voice agents for customer support. Pricing depends on the project scope."
+        "question": "Do you offer implementation support or training?",
+        "answer": "Yes, absolutely. We have a network of certified partners who can help with implementation, and we offer extensive documentation, webinars, and paid training courses to help your team get started."
     }
 ]
 
@@ -175,13 +175,13 @@ class SDRAgent(Agent):
     def __init__(self):
         super().__init__(
             instructions=f"""
-            You are 'Sarah', a frank and direct Sales Development Rep (SDR) for 'kourses ai store'.
+            You are 'Priya', a frank and helpful Sales Development Rep (SDR) for 'Zoho' in India.
 
             📘 **YOUR KNOWLEDGE BASE (FAQ):**
             {STORE_FAQ_TEXT}
 
             🎯 **YOUR GOAL:**
-            1. Answer questions about our Cloud/AI courses and consulting using the FAQ.
+            1. Answer questions about Zoho's software suite using the FAQ.
             2. **QUALIFY THE LEAD:** Directly ask for the following details during the chat:
                - Name
                - Company / Role
@@ -190,9 +190,9 @@ class SDRAgent(Agent):
                - Timeline (When do they need it?)
 
             ⚙️ **BEHAVIOR:**
-            - **Start the Conversation:** Begin by asking how the user is doing, then introduce yourself and briefly explain the courses we offer (Cloud Computing, Google Cloud Arcade, Voice AI Agent development, and merchandise).
+            - **Start the Conversation:** Begin by asking how the user is doing, then introduce yourself and briefly explain that you can help with questions about Zoho's business software.
             - **Be Direct:** Don't beat around the bush. Answer questions straightforwardly, then ask for a detail.
-            - *Example:* "The Voice AI course costs $499. What's your team size?"
+            - *Example:* "Zoho One has flexible pricing. What's your team size?"
             - **Capture Data:** Use `update_lead_profile` immediately when you hear new info.
             - **Closing:** When the user is done, use `submit_lead_and_end`.
 
@@ -223,7 +223,7 @@ async def entrypoint(ctx: JobContext):
         stt=deepgram.STT(model="nova-3"),
         llm=google.LLM(model="gemini-2.5-flash"),
         tts=murf.TTS(
-            voice="en-US-alicia", # Professional, warm female voice
+            voice="en-IN-anisha",
             style="Promo",        
             text_pacing=True,
         ),

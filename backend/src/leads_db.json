@@ -1,12 +1,12 @@
 [
     {
         "name": "Anish",
-        "company": "XYZ company",
+        "company": "XYZ Company",
         "email": "xyz@gmail.com",
-        "role": "SD",
-        "use_case": "Voice Agent Course",
+        "role": "manager",
+        "use_case": "Managing software for accounts",
         "team_size": null,
         "timeline": "Next month",
-        "timestamp": "2025-11-26T15:43:54.889384"
+        "timestamp": "2025-11-26T16:26:43.112876"
     }
 ]
