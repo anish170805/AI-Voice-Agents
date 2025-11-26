@@ -1,19 +1,21 @@
 # ======================================================
-# 🧠 DAY 4: TEACH-THE-TUTOR (AI EDITION)
-# 👨‍💻 DEVELOPED BY ANISH
-# 🚀 Features: LLMs, LangChain, RAG & Active Recall
+# 💼 DAY 5: AI SALES DEVELOPMENT REP (SDR)
+# 🚀 Features: FAQ Retrieval, Lead Qualification, JSON Database
 # ======================================================
 
 import logging
 import json
 import os
-from typing import Annotated, Literal, Optional
-from dataclasses import dataclass
+import asyncio
+from datetime import datetime
+from typing import Annotated, Literal, Optional, List
+from dataclasses import dataclass, asdict
 
-print("\n" + "🤖" * 50)
-print("🚀 AI TUTOR - DAY 4 TUTORIAL")
+print("\n" + "💼" * 50)
+print("🚀 AI SDR AGENT - DAY 5 TUTORIAL")
+print("📚 SELLING:  Kourses.ai courses")
 print("💡 agent.py LOADED SUCCESSFULLY!")
-print("🤖" * 50 + "\n")
+print("💼" * 50 + "\n")
 
 from dotenv import load_dotenv
 from pydantic import Field
@@ -37,184 +39,167 @@ logger = logging.getLogger("agent")
 load_dotenv(".env.local")
 
 # ======================================================
-# 📚 KNOWLEDGE BASE (BIOLOGY DATA)
+# 📂 1. KNOWLEDGE BASE (FAQ)
 # ======================================================
 
-# 🆕 Renamed file so it generates fresh data for you
-CONTENT_FILE = "ai_content.json" 
+FAQ_FILE = "store_faq.json"
+LEADS_FILE = "leads_db.json"
 
-# 🤖 NEW AI QUESTIONS
-DEFAULT_CONTENT = [
-  {
-    "id": "llm",
-    "title": "Large Language Models (LLMs)",
-    "summary": "Large Language Models, or LLMs, are advanced AI models trained on vast amounts of text data. They can understand and generate human-like text for tasks like question answering, summarization, and translation. Examples include models from OpenAI, Google, and Anthropic.",
-    "sample_question": "What are the key capabilities of a Large Language Model?"
-  },
-  {
-    "id": "langchain",
-    "title": "LangChain",
-    "summary": "LangChain is a framework for developing applications powered by language models. It provides tools and abstractions to create complex applications that can connect LLMs to other data sources and APIs, enabling them to be more powerful and data-aware.",
-    "sample_question": "What is the main purpose of using a framework like LangChain?"
-  },
-  {
-    "id": "rag",
-    "title": "Retrieval-Augmented Generation (RAG)",
-    "summary": "Retrieval-Augmented Generation, or RAG, is a technique that enhances LLM responses by retrieving relevant information from an external knowledge base. This allows the model to answer questions about specific or recent data it wasn't trained on, reducing hallucinations.",
-    "sample_question": "How does RAG help improve the responses from a Large Language Model?"
-  },
-  {
-    "id": "ai_agents",
-    "title": "AI Agents",
-    "summary": "An AI Agent uses a language model as its reasoning engine to make decisions and perform actions. It can use a set of tools, observe the outcomes, and loop until a task is complete. This allows it to handle complex, multi-step problems autonomously.",
-    "sample_question": "What makes an AI Agent different from a simple chatbot?"
-  }
+# Default FAQ data for "Kourses ai Store"
+DEFAULT_FAQ = [
+    {
+        "question": "What do you sell?",
+        "answer": "We offer premium courses on Cloud Computing, Google Cloud Arcade, and Voice AI Agent development. We also sell 'Cloud Ninja' merchandise like hoodies and mugs."
+    },
+    {
+        "question": "How much does the Voice AI course cost?",
+        "answer": "The 'Professional Voice AI' course is currently priced at $499. It covers LiveKit, Deepgram, and LLM integration."
+    },
+    {
+        "question": "Do you offer free content?",
+        "answer": "Yes! kourses.ai releases weekly tutorials on YouTube for free. The paid courses offer deep-dives, code reviews, and certification."
+    },
+    {
+        "question": "Do you do corporate consulting?",
+        "answer": "Absolutely. We help companies build internal voice agents for customer support. Pricing depends on the project scope."
+    }
 ]
 
-def load_content():
-    """
-    📖 Checks if AI content JSON exists. 
-    If NO: Generates it from DEFAULT_CONTENT.
-    If YES: Loads it.
-    """
+def load_knowledge_base():
+    """Generates FAQ file if missing, then loads it."""
     try:
-        path = os.path.join(os.path.dirname(__file__), CONTENT_FILE)
-        
-        # Check if file exists
+        path = os.path.join(os.path.dirname(__file__), FAQ_FILE)
         if not os.path.exists(path):
-            print(f"⚠️ {CONTENT_FILE} not found. Generating AI data...")
             with open(path, "w", encoding='utf-8') as f:
-                json.dump(DEFAULT_CONTENT, f, indent=4)
-            print("✅ AI content file created successfully.")
-            
-        # Read the file
+                json.dump(DEFAULT_FAQ, f, indent=4)
         with open(path, "r", encoding='utf-8') as f:
-            data = json.load(f)
-            return data
-            
+            return json.dumps(json.load(f)) # Return as string for the Prompt
     except Exception as e:
-        print(f"⚠️ Error managing content file: {e}")
-        return []
+        print(f"⚠️ Error loading FAQ: {e}")
+        return ""
 
-# Load data immediately on startup
-COURSE_CONTENT = load_content()
+STORE_FAQ_TEXT = load_knowledge_base()
 
 # ======================================================
-# 🧠 STATE MANAGEMENT
+# 💾 2. LEAD DATA STRUCTURE
 # ======================================================
 
 @dataclass
-class TutorState:
-    """🧠 Tracks the current learning context"""
-    current_topic_id: str | None = None
-    current_topic_data: dict | None = None
-    mode: Literal["learn", "quiz", "teach_back"] = "learn"
-    
-    def set_topic(self, topic_id: str):
-        # Find topic in loaded content
-        topic = next((item for item in COURSE_CONTENT if item["id"] == topic_id), None)
-        if topic:
-            self.current_topic_id = topic_id
-            self.current_topic_data = topic
-            return True
-        return False
+class LeadProfile:
+    name: str | None = None
+    company: str | None = None
+    email: str | None = None
+    role: str | None = None
+    use_case: str | None = None
+    team_size: str | None = None
+    timeline: str | None = None
+   
+    def is_qualified(self):
+        """Returns True if we have the minimum info (Name + Email + Use Case)"""
+        return all([self.name, self.email, self.use_case])
 
 @dataclass
 class Userdata:
-    tutor_state: TutorState
-    agent_session: Optional[AgentSession] = None 
+    lead_profile: LeadProfile
 
 # ======================================================
-# 🛠️ TUTOR TOOLS
+# 🛠️ 3. SDR TOOLS
 # ======================================================
 
 @function_tool
-async def select_topic(
-    ctx: RunContext[Userdata], 
-    topic_id: Annotated[str, Field(description="The ID of the topic to study (e.g., 'llm', 'langchain', 'rag', 'ai_agents')")]
-) -> str:
-    """📚 Selects a topic to study from the available list."""
-    state = ctx.userdata.tutor_state
-    success = state.set_topic(topic_id.lower())
-    
-    if success:
-        return f"Topic set to {state.current_topic_data['title']}. Ask the user if they want to 'Learn', be 'Quizzed', or 'Teach it back'."
-    else:
-        available = ", ".join([t["id"] for t in COURSE_CONTENT])
-        return f"Topic not found. Available topics are: {available}"
-
-@function_tool
-async def set_learning_mode(
-    ctx: RunContext[Userdata], 
-    mode: Annotated[str, Field(description="The mode to switch to: 'learn', 'quiz', or 'teach_back'")]
-) -> str:
-    """🔄 Switches the interaction mode and updates the agent's voice/persona."""
-    
-    # 1. Update State
-    state = ctx.userdata.tutor_state
-    state.mode = mode.lower()
-    
-    # 2. Switch Voice based on Mode
-    agent_session = ctx.userdata.agent_session 
-    
-    if agent_session:
-        if state.mode == "learn":
-            # 👨‍🏫 MATTHEW: The Lecturer
-            agent_session.tts.update_options(voice="en-US-matthew", style="Promo")
-            instruction = f"Mode: LEARN. Explain: {state.current_topic_data['summary']}"
-            
-        elif state.mode == "quiz":
-            # 👩‍🏫 ALICIA: The Examiner
-            agent_session.tts.update_options(voice="en-US-alicia", style="Conversational")
-            instruction = f"Mode: QUIZ. Ask this question: {state.current_topic_data['sample_question']}"
-            
-        elif state.mode == "teach_back":
-            # 👨‍🎓 KEN: The Student/Coach
-            agent_session.tts.update_options(voice="en-US-ken", style="Promo")
-            instruction = "Mode: TEACH_BACK. Ask the user to explain the concept to you as if YOU are the beginner."
-        else:
-            return "Invalid mode."
-    else:
-        instruction = "Voice switch failed (Session not found)."
-
-    print(f"🔄 SWITCHING MODE -> {state.mode.upper()}")
-    return f"Switched to {state.mode} mode. {instruction}"
-
-@function_tool
-async def evaluate_teaching(
+async def update_lead_profile(
     ctx: RunContext[Userdata],
-    user_explanation: Annotated[str, Field(description="The explanation given by the user during teach-back")]
+    name: Annotated[Optional[str], Field(description="Customer's name")] = None,
+    company: Annotated[Optional[str], Field(description="Customer's company name")] = None,
+    email: Annotated[Optional[str], Field(description="Customer's email address")] = None,
+    role: Annotated[Optional[str], Field(description="Customer's job title")] = None,
+    use_case: Annotated[Optional[str], Field(description="What they want to build or learn")] = None,
+    team_size: Annotated[Optional[str], Field(description="Number of people in their team")] = None,
+    timeline: Annotated[Optional[str], Field(description="When they want to start (e.g., Now, next month)")] = None,
 ) -> str:
-    """📝 call this when the user has finished explaining a concept in 'teach_back' mode."""
-    print(f"📝 EVALUATING EXPLANATION: {user_explanation}")
-    return "Analyze the user's explanation. Give them a score out of 10 on accuracy and clarity, and correct any mistakes."
+    """
+    ✍️ Captures lead details provided by the user during conversation.
+    Only call this when the user explicitly provides information.
+    """
+    profile = ctx.userdata.lead_profile
+   
+    # Update only fields that are provided (not None)
+    if name: profile.name = name
+    if company: profile.company = company
+    if email: profile.email = email
+    if role: profile.role = role
+    if use_case: profile.use_case = use_case
+    if team_size: profile.team_size = team_size
+    if timeline: profile.timeline = timeline
+   
+    print(f"📝 UPDATING LEAD: {profile}")
+    return "Lead profile updated. Continue the conversation."
+
+@function_tool
+async def submit_lead_and_end(
+    ctx: RunContext[Userdata],
+) -> str:
+    """
+    💾 Saves the lead to the database and signals the end of the call.
+    Call this when the user says goodbye or 'that's all'.
+    """
+    profile = ctx.userdata.lead_profile
+   
+    # Save to JSON file (Append mode)
+    db_path = os.path.join(os.path.dirname(__file__), LEADS_FILE)
+   
+    entry = asdict(profile)
+    entry["timestamp"] = datetime.now().isoformat()
+   
+    # Read existing, append, write back (Simple JSON DB)
+    existing_data = []
+    if os.path.exists(db_path):
+        try:
+            with open(db_path, "r") as f:
+                existing_data = json.load(f)
+        except: pass
+   
+    existing_data.append(entry)
+   
+    with open(db_path, "w") as f:
+        json.dump(existing_data, f, indent=4)
+       
+    print(f"✅ LEAD SAVED TO {LEADS_FILE}")
+    return f"Lead saved. Summarize the call for the user: 'Thanks {profile.name}, I have your info regarding {profile.use_case}. We will email you at {profile.email}. Goodbye!'"
 
 # ======================================================
-# 🧠 AGENT DEFINITION
+# 🧠 4. AGENT DEFINITION
 # ======================================================
 
-class TutorAgent(Agent):
+class SDRAgent(Agent):
     def __init__(self):
-        # Generate list of topics for the prompt
-        topic_list = ", ".join([f"{t['id']} ({t['title']})" for t in COURSE_CONTENT])
-        
         super().__init__(
             instructions=f"""
-            You are an AI Tutor designed to help users master concepts like Large Language Models and LangChain.
-            
-            📚 **AVAILABLE TOPICS:** {topic_list}
-            
-            🔄 **YOU HAVE 3 MODES (and 3 voices):**
-            1. **LEARN Mode (Voice: Matthew):** You explain the concept clearly using the summary data.
-            2. **QUIZ Mode (Voice: Alicia):** You ask the user a specific question to test knowledge.
-            3. **TEACH_BACK Mode (Voice: Ken):** YOU pretend to be a student. Ask the user to explain the concept to you.
-            
+            You are 'Sarah', a frank and direct Sales Development Rep (SDR) for 'kourses ai store'.
+
+            📘 **YOUR KNOWLEDGE BASE (FAQ):**
+            {STORE_FAQ_TEXT}
+
+            🎯 **YOUR GOAL:**
+            1. Answer questions about our Cloud/AI courses and consulting using the FAQ.
+            2. **QUALIFY THE LEAD:** Directly ask for the following details during the chat:
+               - Name
+               - Company / Role
+               - Email
+               - What are they trying to build? (Use Case)
+               - Timeline (When do they need it?)
+
             ⚙️ **BEHAVIOR:**
-            - Start by asking what topic they want to study.
-            - Use the `set_learning_mode` tool immediately when the user asks to learn, take a quiz, or teach.
-            - In 'teach_back' mode, listen to their explanation and then use `evaluate_teaching` to give feedback.
+            - **Start the Conversation:** Begin by asking how the user is doing, then introduce yourself and briefly explain the courses we offer (Cloud Computing, Google Cloud Arcade, Voice AI Agent development, and merchandise).
+            - **Be Direct:** Don't beat around the bush. Answer questions straightforwardly, then ask for a detail.
+            - *Example:* "The Voice AI course costs $499. What's your team size?"
+            - **Capture Data:** Use `update_lead_profile` immediately when you hear new info.
+            - **Closing:** When the user is done, use `submit_lead_and_end`.
+
+            🚫 **RESTRICTIONS:**
+            - If you don't know an answer, say "I'll check with the team and email you." (Don't make up prices).
             """,
-            tools=[select_topic, set_learning_mode, evaluate_teaching],
+            tools=[update_lead_profile, submit_lead_and_end],
         )
 
 # ======================================================
@@ -227,19 +212,18 @@ def prewarm(proc: JobProcess):
 async def entrypoint(ctx: JobContext):
     ctx.log_context_fields = {"room": ctx.room.name}
 
-    print("\n" + "🤖" * 25)
-    print("🚀 STARTING AI TUTOR SESSION")
-    print(f"📚 Loaded {len(COURSE_CONTENT)} topics from Knowledge Base")
-    
+    print("\n" + "💼" * 25)
+    print("🚀 STARTING SDR SESSION")
+   
     # 1. Initialize State
-    userdata = Userdata(tutor_state=TutorState())
+    userdata = Userdata(lead_profile=LeadProfile())
 
     # 2. Setup Agent
     session = AgentSession(
         stt=deepgram.STT(model="nova-3"),
         llm=google.LLM(model="gemini-2.5-flash"),
         tts=murf.TTS(
-            voice="en-US-matthew", 
+            voice="en-US-alicia", # Professional, warm female voice
             style="Promo",        
             text_pacing=True,
         ),
@@ -247,13 +231,10 @@ async def entrypoint(ctx: JobContext):
         vad=ctx.proc.userdata["vad"],
         userdata=userdata,
     )
-    
-    # 3. Store session in userdata for tools to access
-    userdata.agent_session = session
-    
-    # 4. Start
+   
+    # 3. Start
     await session.start(
-        agent=TutorAgent(),
+        agent=SDRAgent(),
         room=ctx.room,
         room_input_options=RoomInputOptions(
             noise_cancellation=noise_cancellation.BVC()
